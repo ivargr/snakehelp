@@ -40,7 +40,7 @@ class Parameters:
                 out.append(field_tuple(field.name, field.type))
             else:
                 assert issubclass(field.type, Parameters), "Field type %s is not valid" % field.type
-                out.extend(field.type.get_fields)
+                out.extend(field.type.get_fields())
 
         return out
 
