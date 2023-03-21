@@ -1,13 +1,12 @@
 import os
-
 import pytest
-from snakehelp import Parameters
+from snakehelp import parameters
 from snakehelp.snakehelp import type_to_regex
-from dataclasses import dataclass
 from typing import Literal
 
 
 class WildcardMock:
+    """Behaves as a Snakemake wildcards object. Initialize with kwargs."""
     def __init__(self, *args, **kwargs):
         assert len(args) == 0
         self._data = kwargs
@@ -19,27 +18,27 @@ class WildcardMock:
         return self._data.items()
 
 
-@dataclass
-class MyParams(Parameters):
+@parameters
+class MyParams:
     seed: int
     name: str
     ratio: float
 
 
-@dataclass
-class MyParams2(Parameters):
+@parameters
+class MyParams2:
     param1: MyParams
     some_other_param: str
 
 
-@dataclass
-class MyParams3(Parameters):
+@parameters
+class MyParams3:
     param1: Literal["test", "test2"]
     param2: str
 
 
-@dataclass
-class MyParams4(Parameters):
+@parameters
+class MyParams4:
     seed: int
     name: str
     file_ending: Literal[".npz"]
