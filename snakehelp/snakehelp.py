@@ -83,11 +83,11 @@ class Parameters:
 
 def type_to_regex(type):
     if type == int:
-        return "\d+"
+        return "\\d+"
     elif type == float:
         return "[+-]?([0-9]*[.])?[0-9]+"
     elif type == str:
-        return "\w+"
+        return "\\w+"
     elif get_origin(type) == Literal:
         return "|".join([re.escape(arg) for arg in get_args(type)])
 
