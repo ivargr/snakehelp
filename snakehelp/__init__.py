@@ -5,3 +5,4 @@ __email__ = 'ivar.grytten@gmail.com'
 __version__ = '0.0.1'
 
 from .parameters import parameters
+from .config import set_data_folder, get_data_folder

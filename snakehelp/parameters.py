@@ -1,9 +1,11 @@
+import itertools
 import os
 from collections import namedtuple
 from dataclasses import dataclass, fields
 from types import UnionType
 from typing import get_origin, Literal, Union, get_args
 from snakehelp.snakehelp import classproperty, string_is_valid_type, type_to_regex
+from .config import get_data_folder
 
 
 def parameters(base_class):
@@ -95,25 +97,42 @@ def parameters(base_class):
             Keyword arguments can be specified to fix certain variables to values.
             """
             names_with_regexes = []
+            if get_data_folder() != "":
+                names_with_regexes.append(get_data_folder())
+
             for name in kwargs:
-                assert name in cls.parameters, "Trying to force a field %s. Available fields are %s" % (name, cls.parameters)
+                assert name in cls.parameters, "Trying to force a field '%s' which is not among the available fields which are %s" % (name, cls.parameters)
 
 
             for field in cls.get_fields(minimal_children=True):
                 if field.name in kwargs:
-                    assert string_is_valid_type(kwargs[field.name], field.type), \
-                        f"Trying to set field {field.name} to value {kwargs[field.name]}, " \
-                        f"but this is not compatible with the field type {field.type}."
+                    # value has been specified. If this is a list, we want to return multiple possible values
+                    forced_values = kwargs[field.name]
+                    if not isinstance(forced_values, list):
+                        forced_values = [forced_values]
 
-                    names_with_regexes.append(str(kwargs[field.name]))
+                    for forced_value in forced_values:
+                        assert string_is_valid_type(forced_value, field.type), \
+                            f"Trying to set field {field.name} to value {forced_value}, " \
+                            f"but this is not compatible with the field type {field.type}."
+
+                    names_with_regexes.append([str(v) for v in forced_values])
                 else:
                     if get_origin(field.type) == Literal and len(get_args(field.type)) == 1:
                         # literal types enforces a single value, should not be wildcards
-                        names_with_regexes.append(get_args(field.type)[0])
+                        names_with_regexes.append([get_args(field.type)[0]])
                     else:
-                        names_with_regexes.append("{" + field.name + "," + type_to_regex(field.type) + "}")
+                        names_with_regexes.append(["{" + field.name + "," + type_to_regex(field.type) + "}"])
 
-            return os.path.sep.join(names_with_regexes)
+            out_files = itertools.product(*names_with_regexes)
+            out_files = [os.path.sep.join(out_file) for out_file in out_files]
+
+            if len(out_files) == 1:
+                return out_files[0]
+            else:
+                return out_files
+
+            #return os.path.sep.join(names_with_regexes)
 
     Parameters.__name__ = base_class.__name__
     Parameters.__qualname__ = base_class.__qualname__

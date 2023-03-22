@@ -152,6 +152,19 @@ def test_children_with_literal_that_should_be_ignored():
     assert Parent.as_output() == r"{type,\w+}/{param2,\d+}/results.txt"
 
 
+
+@parameters
+class Combinatorial:
+    param1: int
+    param2: int
+
+
+def test_combinatorial_parameters():
+    files = Combinatorial.as_output(param1=[1, 2, 3], param2=[4, 5])
+    assert len(files) == 6
+    assert set(files) == set(["1/4", "1/5", "2/4", "2/5", "3/4", "3/5"])
+
+
 if __name__ == "__main__":
     test_type_to_regex()
     #test_union_params()
