@@ -1,7 +1,8 @@
 import os
 from collections import namedtuple
 from dataclasses import dataclass, fields
-from typing import get_origin, Literal
+from types import UnionType
+from typing import get_origin, Literal, Union, get_args
 from snakehelp.snakehelp import classproperty, string_is_valid_type, type_to_regex
 
 
@@ -15,21 +16,29 @@ def parameters(base_class):
             return [field.name for field in fields(cls)]
 
         @classmethod
-        def get_fields(cls):
+        def get_fields(cls, minimal=False, minimal_children=False):
             """
             Returns a list of tuples (field_name, field_type)
+
+            If minimal is True, Literal types with only one possible value are ignored, i.e. only
+            arguments that are necessary for uniquely representing the object are included.
+
+            minimal_children specifies only whether children should be minimal.
             """
             field_tuple = namedtuple("Field", ["name", "type"])
             out = []
             for field in fields(cls):
+                if minimal and get_origin(field.type) == Literal and len(get_args(field.type)) == 1:
+                    continue
+
                 if field.type in (int, str, float):
                     out.append(field_tuple(field.name, field.type))
-                elif get_origin(field.type) == Literal:
+                elif get_origin(field.type) in (Literal, Union, UnionType):
                     out.append(field_tuple(field.name, field.type))
                 else:
                     assert hasattr(field.type, "get_fields"), "Field type %s is not valid. " \
                                                               "Must be a base type or a class decorated with @parameters" % field.type
-                    out.extend(field.type.get_fields())
+                    out.extend(field.type.get_fields(minimal=minimal_children, minimal_children=minimal_children))
 
             return out
 
@@ -40,38 +49,73 @@ def parameters(base_class):
             """
             return [field.name for field in cls.get_fields()]
 
-        @classmethod
-        def as_input(cls, wildcards):
+        @classproperty
+        def minimal_parameters(cls):
             """
-            Tries to return a valid snakemake input-file by using the given wildcards (as many as possible, starting from the first).
-
-            If fields are Union-types, there may be multible possible paths that can be created. This method checks that there
-            is no ambiguity, and raises an Exception if there is.
+            Returns a list of the minimum set of parameters needed to uniquely represent
+            this objeckt, meaning that Literal parameters with only one possible value are ignored.
             """
-            assert hasattr(wildcards,
-                           "items"), "As input can only be called with a dictlike object with an items() method"
-
-            fields = cls.get_fields()
-
-            path = []
-
-            for i, (name, value) in enumerate(wildcards.items()):
-                assert name == fields[i].name
-                assert string_is_valid_type(value, fields[i].type)
-                path.append(value)
-
-            return os.path.sep.join(path)
+            return [field.name for field in cls.get_fields(minimal=True)]
 
         @classmethod
-        def as_output(cls):
+        def as_input(cls):
+            """
+            Returns an input-function that can be used by Snakemake.
+            """
+
+            def func(wildcards):
+                assert hasattr(wildcards,
+                               "items"), "As input can only be called with a dictlike object with an items() method"
+
+                fields = cls.get_fields()
+                # create a path from the wildcards and the parameters
+                # can maybe be done by just calling output with these wildcards.
+                return cls.as_output(**{name: t for name, t in wildcards.items() if name in cls.parameters})
+
+                path = []
+
+                """
+                for i, (name, value) in enumerate(wildcards.items()):
+                    if i >= len(fields):
+                        break
+                    assert name == fields[i].name, f"Parsing {cls}. Invalid at {i}, name: {name}, expected {fields[i].name}"
+                    assert string_is_valid_type(value, fields[i].type), f"{value} is not a valid as type {fields[i].type}"
+                    path.append(value)
+
+                return os.path.sep.join(path)
+                """
+
+            return func
+
+        @classmethod
+        def as_output(cls, **kwargs):
             """
             Returns a valid Snakemake wildcard string with regex so force types
-            """
-            names_with_regexes = ["{" + field.name + "," + type_to_regex(field.type) + "}" for field in
-                                  cls.get_fields()]
-            return os.path.sep.join(names_with_regexes)
 
+            Keyword arguments can be specified to fix certain variables to values.
+            """
+            names_with_regexes = []
+            for name in kwargs:
+                assert name in cls.parameters, "Trying to force a field %s. Available fields are %s" % (name, cls.parameters)
+
+
+            for field in cls.get_fields(minimal_children=True):
+                if field.name in kwargs:
+                    assert string_is_valid_type(kwargs[field.name], field.type), \
+                        f"Trying to set field {field.name} to value {kwargs[field.name]}, " \
+                        f"but this is not compatible with the field type {field.type}."
+
+                    names_with_regexes.append(str(kwargs[field.name]))
+                else:
+                    if get_origin(field.type) == Literal and len(get_args(field.type)) == 1:
+                        # literal types enforces a single value, should not be wildcards
+                        names_with_regexes.append(get_args(field.type)[0])
+                    else:
+                        names_with_regexes.append("{" + field.name + "," + type_to_regex(field.type) + "}")
+
+            return os.path.sep.join(names_with_regexes)
 
     Parameters.__name__ = base_class.__name__
     Parameters.__qualname__ = base_class.__qualname__
+
     return Parameters

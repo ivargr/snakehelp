@@ -1,0 +1,96 @@
+configfile: "config/config.yaml"
+from snakehelp import parameters
+from dataclasses import dataclass
+from typing import Literal, Union
+
+
+@parameters
+class ReferenceGenome:
+    genome_build: str
+    random_seed: int
+    dataset_size: Literal["small", "medium", "big"]
+    file: Literal["ref.fa"]
+
+
+@parameters
+class ChipSeqReads:
+    n_peaks: int
+    binding_strength: float
+    file: Literal["reads.fq.gz"]
+
+@parameters
+class ReadErrorProfile:
+    substitution_rate: float
+    indel_rate: float
+
+
+@parameters
+class SingleEndReads:
+    n_reads: int
+    read_length: int
+    error_profile: ReadErrorProfile
+    ending: Literal["reads.fq.gz"]
+
+
+@parameters
+class PairedEndReads:
+    n_reads: int
+    fragment_length_mean: int
+    fragment_length_std: int
+    error_profile: ReadErrorProfile
+
+
+@parameters
+class SimulatedReads:
+    reference_genome: ReferenceGenome
+    read_config: Union[ChipSeqReads, PairedEndReads, SingleEndReads]
+    file: Literal["reads.fq.gz"]
+
+
+@parameters
+class MappedReads:
+    reads: SimulatedReads
+    method: str
+    n_threads: int
+    ending: Literal["mapped.bam"]
+
+
+def test_input_function(wildcards):
+    print(wildcards, type(wildcards))
+    return "test.txt"
+
+
+rule test:
+    input: test_input_function
+    output: touch("data/{param1,\d+}/{param2,\w+}/file.txt")
+
+
+rule map:
+    input:
+        reads=SimulatedReads.as_input(),
+        reference=ReferenceGenome.as_input()
+    output:
+        reads=touch(MappedReads.as_output(method='bwa'))
+
+
+print(MappedReads.as_output(method='bwa'))
+
+
+rule test_files:
+    output:
+        reads=touch("hg38/123/medium/some/read/config/reads.fq.gz"),
+        reference_genome=touch("hg38/123/medium/ref.fa")
+
+
+rule all:
+    input:
+        "hg38/123/medium/some/read/config/bwa/8/mapped.bam"
+
+"""
+rule map:
+    input:
+        ref = ReferenceGenome.as_input,
+        reads = SimulatedReads.as_input
+    output:
+        bam=MappedReads.as_output
+"""
