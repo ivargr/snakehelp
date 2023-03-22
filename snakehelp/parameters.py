@@ -13,6 +13,8 @@ def parameters(base_class):
     Decorator to make a class into a class that can be used as parameters.
     """
     class Parameters(dataclass(base_class)):
+        file_ending = base_class.file_ending if hasattr(base_class, "file_ending") else ""
+
         @classproperty
         def _field_names(cls):
             return [field.name for field in fields(cls)]
@@ -90,6 +92,10 @@ def parameters(base_class):
             return func
 
         @classmethod
+        def path(cls, **kwargs):
+            return cls.as_output(**kwargs)
+
+        @classmethod
         def as_output(cls, **kwargs):
             """
             Returns a valid Snakemake wildcard string with regex so force types
@@ -98,13 +104,14 @@ def parameters(base_class):
             """
             names_with_regexes = []
             if get_data_folder() != "":
-                names_with_regexes.append(get_data_folder())
+                names_with_regexes.append([get_data_folder()])
 
             for name in kwargs:
-                assert name in cls.parameters, "Trying to force a field '%s' which is not among the available fields which are %s" % (name, cls.parameters)
+                if name != "file_ending":
+                    assert name in cls.parameters, "Trying to force a field '%s' which is not among the available fields which are %s" % (name, cls.parameters)
 
 
-            for field in cls.get_fields(minimal_children=True):
+            for field in cls.get_fields(minimal_children=False):
                 if field.name in kwargs:
                     # value has been specified. If this is a list, we want to return multiple possible values
                     forced_values = kwargs[field.name]
@@ -124,9 +131,25 @@ def parameters(base_class):
                     else:
                         names_with_regexes.append(["{" + field.name + "," + type_to_regex(field.type) + "}"])
 
-            out_files = itertools.product(*names_with_regexes)
-            out_files = [os.path.sep.join(out_file) for out_file in out_files]
+            # file ending can be overwritten
+            file_ending = cls.file_ending
+            if "file_ending" in kwargs:
+                file_ending = kwargs["file_ending"]
 
+            if not isinstance(file_ending, list):
+                file_ending = [file_ending]
+
+            names_with_regexes.append(file_ending)
+            out_files = itertools.product(*names_with_regexes)
+
+            try:
+                # join everything expect file ending (last element) with path sep
+                out_files = [os.path.sep.join(out_file[:-1]) + out_file[-1] for out_file in out_files]
+            except TypeError:
+                print(out_files)
+                raise
+
+            print(out_files)
             if len(out_files) == 1:
                 return out_files[0]
             else:

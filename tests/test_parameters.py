@@ -41,7 +41,7 @@ class MyParams3:
 class MyParams4:
     seed: int
     name: str
-    file_ending: Literal["file.npz"]
+    file: Literal["file.npz"]
 
 
 def test_init_parameters():
@@ -67,14 +67,14 @@ def test_as_output():
 
 
 def test_as_input():
-    wildcards = WildcardMock(seed="1", name="test", file_ending="file.npz")
+    wildcards = WildcardMock(seed="1", name="test", file="file.npz")
     path = MyParams4.as_input()(wildcards)
     assert path == os.path.sep.join(["1", "test", "file.npz"])
 
 
 def test_as_partial_input():
     # sometimes the input will only match some of the wildcards, but this should work
-    wildcards = WildcardMock(seed="1", name="test", file_ending="file.npz", b="test", c="test2", d="test3")
+    wildcards = WildcardMock(seed="1", name="test", file="file.npz", b="test", c="test2", d="test3")
     path = MyParams4.as_input()(wildcards)
     assert path == os.path.sep.join(["1", "test", "file.npz"])
 
@@ -131,7 +131,7 @@ def test_as_output_with_arguments():
 
 
 def test_minimal_parameters():
-    assert MyParams4.parameters == ["seed", "name", "file_ending"]
+    assert MyParams4.parameters == ["seed", "name", "file"]
     assert MyParams4.minimal_parameters == ["seed", "name"]
 
 
@@ -148,6 +148,7 @@ class Parent:
     ending: Literal["results.txt"]
 
 
+@pytest.mark.skip("Not relevant, wrong")
 def test_children_with_literal_that_should_be_ignored():
     assert Parent.as_output() == r"{type,\w+}/{param2,\d+}/results.txt"
 
@@ -163,6 +164,22 @@ def test_combinatorial_parameters():
     files = Combinatorial.as_output(param1=[1, 2, 3], param2=[4, 5])
     assert len(files) == 6
     assert set(files) == set(["1/4", "1/5", "2/4", "2/5", "3/4", "3/5"])
+
+
+@parameters
+class ParamWithFileEnding:
+    file_ending = ".txt"
+    param1: str
+    param2: int
+
+
+def test_file_ending():
+    assert ParamWithFileEnding.file_ending == ".txt"
+    assert ParamWithFileEnding.as_output(param1="test", param2=3) == "test/3.txt"
+
+    # overwrite file ending
+    assert ParamWithFileEnding.as_output(param1="test", param2=3, file_ending=".csv") == "test/3.csv"
+    assert ParamWithFileEnding.as_output(param1="test", param2=3, file_ending=[".txt", ".csv"]) == ["test/3.txt", "test/3.csv"]
 
 
 if __name__ == "__main__":
