@@ -202,7 +202,7 @@ def test_parameter_objects():
 
     o_nested = Parent(param1=Child(type="test", ending="file.txt"), param2=3, ending="results.txt")
     assert o_nested.flat_data() == ["test", "file.txt", 3, "results.txt"]
-    assert o.path() == os.path.sep.join(["test", "3"]) + ".txt"
+    assert o.file_path() == os.path.sep.join(["test", "3"]) + ".txt"
 
 
 def test_from_flat_params():
@@ -223,7 +223,7 @@ class SomeResult:
 
 
 def test_result_decorator():
-    assert SomeResult().path() == "test/SomeResult.txt"
+    assert SomeResult().file_path() == "test/SomeResult.txt"
 
 
 if __name__ == "__main__":

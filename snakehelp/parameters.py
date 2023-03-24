@@ -8,7 +8,7 @@ from typing import get_origin, Literal, Union, get_args
 from snakehelp.snakehelp import classproperty, string_is_valid_type, type_to_regex
 from .config import get_data_folder
 from shared_memory_wrapper import to_file, from_file
-
+import dataclasses
 
 class ParameterLike:
     pass
@@ -148,19 +148,19 @@ def parameters(base_class):
                     data.append(element)
             return data
 
-        def path(self):
+        def file_path(self):
             file_name = ""
             if self.file_name is not None:
                 file_name = os.path.sep + self.file_name
             return get_data_folder() + os.path.sep.join(map(str, self.flat_data())) + file_name + self.file_ending
 
         def store_result(self, result):
-            path = self.path()
+            path = self.file_path()
             Path(path).mkdir(parents=True, exist_ok=True)
             to_file(result, path)
 
         def fetch_result(self):
-            return from_file(self.path())
+            return from_file(self.file_path())
 
         @classmethod
         def from_flat_params(cls, **params):
@@ -176,6 +176,9 @@ def parameters(base_class):
                     if field.name in params:
                         data[field.name] = params[field.name]
                     else:
+                        assert not isinstance(field.default, dataclasses._MISSING_TYPE), \
+                            f"Field {field.name} in class {cls} does not have a default value " \
+                            f"set and no value was provided for it when calling from_flat_params."
                         data[field.name] = field.default
 
             return cls(**data)
@@ -189,7 +192,7 @@ def parameters(base_class):
             """
             names_with_regexes = []
             if get_data_folder() != "":
-                names_with_regexes.append([get_data_folder()])
+                names_with_regexes.append([get_data_folder().replace(os.path.sep, "")])
 
             for name in kwargs:
                 if name != "file_ending" and name != "file_name":
