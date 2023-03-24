@@ -1,9 +1,12 @@
 import itertools
-
 import pandas as pd
-
 from snakehelp.parameters import ParameterLike
-from snakehelp.plotting import at_least_list
+
+
+def at_least_list(element):
+    if isinstance(element, list):
+        return element
+    return [element]
 
 
 class ParameterCombinations:

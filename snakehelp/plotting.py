@@ -1,6 +1,19 @@
 from dataclasses import dataclass
+from .parameters import ParameterLike, ResultLike
 from typing import Literal
+import plotly.express as px
+import tabulate
+
+from snakehelp.parameter_combinations import ParameterCombinations
+
+
 #from .parameter_combinations import ParameterCombinations
+
+plotting_functions = {
+    "bar": px.bar,
+    "line": px.line,
+    "scatter": px.scatter
+}
 
 
 @dataclass
@@ -16,6 +29,8 @@ class PlotType:
     facet_row: str = None
     color: str = None
     labels: str = None
+    markers: bool = False
+    layout: dict = None
 
     def __post_init__(self):
         self._validate()
@@ -59,35 +74,72 @@ class PlotType:
         }
         return {name: val for name, val in dim.items() if val is not None}
 
-    def plot(self, data):
-        return Plot(self, data)
-
-
-def at_least_list(element):
-    if isinstance(element, list):
-        return element
-    return [element]
+    def plot(self, out_base_name, **data):
+        return Plot(self, out_base_name, **data)
 
 
 class Plot:
-    def __init__(self, plot_type: PlotType, data: dict):
+    def __init__(self, plot_type: PlotType, out_base_name: str, **data):
         self._plot_type = plot_type
+        self._out_base_name = out_base_name
         self._data = data
         self._validate()
         self._prefix = 'data'
+        self._parameter_combinations = ParameterCombinations(self._plot_type.parameter_types(), self._plot_type.result_types())
 
     def _validate(self):
         for name, value in self._data.items():
             assert name in self._plot_type.parameter_types(), \
-                f"Specified data parameter {name} is not in the plot type's parameter: {self._plot_types.parameter_types()}"
+                f"Specified data parameter {name} is not in the plot type's parameter: {self._plot_type.parameter_types()}"
 
         for parameter in self._plot_type.parameter_types():
             assert parameter in self._data, f"The plot type {self._plot_type} requires parameter {parameter} to be specified."
 
-    def get_data_file_names(self):
-        combinations = self.get_parameter_combinations().combinations()
-        file_names = []
-        for combination in combinations:
-            file_names.append(self._get_result_path(combination))
+    def file_names(self):
+        return self._parameter_combinations.get_files(**self._data)
 
-        return file_names
+    def plot(self):
+        df = self._parameter_combinations.get_results_dataframe(**self._data)
+        df.to_csv(self._out_base_name + ".csv", index=False)
+
+        markdown_table = tabulate.tabulate(df, headers=df.columns, tablefmt="github")
+        with open(self._out_base_name + ".txt", "w") as f:
+            f.write(markdown_table + "\n")
+
+        title = ""
+        if "title" in self._data:
+            title = self._data["title"]
+
+        specification = {}
+        for dimension, value in self._plot_type.dimensions().items():
+            print(dimension, value)
+            print(type(value))
+
+            if type(value) != str and issubclass(value, ParameterLike):
+                value = value.file_name
+            specification[dimension] = value
+
+        if self._plot_type.type != "scatter" and self._plot_type.markers:
+            specification["markers"] = True
+            assert self._plot_type.labels is not None, "When markers: True, you need to define labels in the plot config"
+            specification["text"] = self._plot_type.labels
+
+        assert self._plot_type.type in plotting_functions, "Plot type %s not supported"
+        func = plotting_functions[self._plot_type.type]
+        fig = func(df, **specification, template="simple_white", title=title)
+
+        # prettier facet titles, names, etc
+        #fig.for_each_annotation(lambda a: a.update(text=pretty_name(a.text.split("=")[-1])))
+        #fig.for_each_trace(lambda t: t.update(name=pretty_name(t.name)))
+
+        if "text" in specification:
+            fig.update_traces(textposition="bottom right")
+
+        # fig.update_annotations(font=dict(size=20))
+        # fig.update_layout(font=dict(size=20))
+        if self._plot_type.layout is not None:
+            fig.update_layout(**self._plot_type.layout)
+
+        fig.show()
+        fig.write_image(self._out_base_name + ".png")
+        fig.write_html(self._out_base_name + ".html")

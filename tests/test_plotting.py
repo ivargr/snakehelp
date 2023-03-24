@@ -1,7 +1,7 @@
-from snakehelp.parameters import parameters
+from snakehelp.parameters import parameters, result
 from typing import Literal
 from dataclasses import dataclass
-from snakehelp.plotting import PlotType
+from snakehelp.plotting import PlotType, Plot
 import pytest
 
 @parameters
@@ -23,7 +23,7 @@ class MappedReads:
     method: Method
 
 
-@parameters
+@result
 class MappingRecall:
     mapped_reads: MappedReads
 
@@ -38,13 +38,22 @@ default_values = {
 
 def test_plot_type():
     plot_type = PlotType("bar", x="method_name", y=MappingRecall, facet_col="read_length")
-
     with pytest.raises(AssertionError):
         plot_type = PlotType("bar", x="method_name", y=MappingRecall, facet_col="read_length", facet_row="test123")
 
 
-
 def test_simple_plot():
-    pass
+    MappingRecall.from_flat_params(method_name="bwa").store_result(0.5)
+    MappingRecall.from_flat_params(method_name="minimap").store_result(0.5)
+
+    plot_type = PlotType("bar", x="method_name", y=MappingRecall)
+    plot = Plot(plot_type, "testplot", method_name=["bwa", "minimap"])
+
+    # get file names
+    print(plot.file_names())
+
+    # generate plot
+    plot.plot()
+
 
 
