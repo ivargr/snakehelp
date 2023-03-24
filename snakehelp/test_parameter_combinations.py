@@ -1,5 +1,5 @@
 from snakehelp.plotting import ParameterCombinations
-from snakehelp.parameters import parameters
+from snakehelp.parameters import parameters, result
 from typing import Literal
 import itertools
 
@@ -11,16 +11,14 @@ class Config:
     method_name: str = "bwa"
 
 
-@parameters
+@result
 class Precision:
     config: Config = Config()
-    file_ending = ".txt"
 
 
-@parameters
+@result
 class Recall:
     config: Config
-    file_ending = ".txt"
 
 
 def test_parameter_combinations():

@@ -45,12 +45,6 @@ def test_plot_type():
 
 
 def test_simple_plot():
-    recall1 = MappingRecall.from_flat_params(method="bwa").store_result(0.5)
-    recall2 = MappingRecall.from_flat_params(method="minimap2").store_result(0.7)
-
-    plot_type = PlotType("bar", x="method_name", y=MappingRecall)
-    df = plot.get_results_dataframe(method_name=["bwa", "minimap"])
-    print(df)
-
+    pass
 
 

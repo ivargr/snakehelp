@@ -1,6 +1,7 @@
 import os
 import pytest
 from snakehelp import parameters
+from snakehelp.parameters import result
 from snakehelp.snakehelp import type_to_regex
 from typing import Literal, Union
 
@@ -64,6 +65,19 @@ def test_type_to_regex():
 
 def test_as_output():
     assert MyParams4.as_output() == r"{seed,\d+}/{name,\w+}/file.npz"
+
+
+@parameters
+class ParamsWithFileName:
+    param: str
+    file_name = "test"
+    file_ending = ".tmp"
+
+
+def test_as_output_with_filename():
+    assert ParamsWithFileName.as_output() == r"{param,\w+}/test.tmp"
+    assert ParamsWithFileName.as_output(file_name="test2") == r"{param,\w+}/test2.tmp"
+    assert ParamsWithFileName.as_output(file_name="test2", file_ending=".txt") == r"{param,\w+}/test2.txt"
 
 
 def test_as_input():
@@ -187,9 +201,8 @@ def test_parameter_objects():
     assert o.data() == ["test", 3], o.data()
 
     o_nested = Parent(param1=Child(type="test", ending="file.txt"), param2=3, ending="results.txt")
-    print(o_nested.data())
     assert o_nested.flat_data() == ["test", "file.txt", 3, "results.txt"]
-    assert o.path() == os.path.sep.join(["test", "3"])  + ".txt"
+    assert o.path() == os.path.sep.join(["test", "3"]) + ".txt"
 
 
 def test_from_flat_params():
@@ -204,7 +217,13 @@ def test_store_result():
     assert p.fetch_result() == "hi"
 
 
+@result
+class SomeResult:
+    config: str = "test"
 
+
+def test_result_decorator():
+    assert SomeResult().path() == "test/SomeResult.txt"
 
 
 if __name__ == "__main__":

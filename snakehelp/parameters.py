@@ -14,11 +14,30 @@ class ParameterLike:
     pass
 
 
+class ResultLike:
+    pass
+
+
+def result(base_class):
+    class Result(parameters(base_class)):
+        """
+        A Result is simply a Parameter where the file name is by default the result's class name
+        """
+        file_name = base_class.__name__
+        file_ending = ".txt"
+
+    Result.__name__ = base_class.__name__
+    Result.__qualname__ = base_class.__qualname__
+
+    return Result
+
+
 def parameters(base_class):
     """
     Decorator to make a class into a class that can be used as parameters.
     """
     class Parameters(dataclass(base_class), ParameterLike):
+        file_name = base_class.file_name if hasattr(base_class, "file_name") else None
         file_ending = base_class.file_ending if hasattr(base_class, "file_ending") else ""
 
         @classproperty
@@ -130,7 +149,10 @@ def parameters(base_class):
             return data
 
         def path(self):
-            return get_data_folder() + os.path.sep.join(map(str, self.flat_data())) + os.path.sep + self.__class__.__name__ + self.file_ending
+            file_name = ""
+            if self.file_name is not None:
+                file_name = os.path.sep + self.file_name
+            return get_data_folder() + os.path.sep.join(map(str, self.flat_data())) + file_name + self.file_ending
 
         def store_result(self, result):
             path = self.path()
@@ -170,7 +192,7 @@ def parameters(base_class):
                 names_with_regexes.append([get_data_folder()])
 
             for name in kwargs:
-                if name != "file_ending":
+                if name != "file_ending" and name != "file_name":
                     assert name in cls.parameters, "Trying to force a field '%s' which is not among the available fields which are %s" % (name, cls.parameters)
 
 
@@ -193,6 +215,17 @@ def parameters(base_class):
                         names_with_regexes.append([get_args(field.type)[0]])
                     else:
                         names_with_regexes.append(["{" + field.name + "," + type_to_regex(field.type) + "}"])
+
+            # file name
+            file_name = cls.file_name
+            if file_name is not None or "file_name" in kwargs:
+                if "file_name" in kwargs:
+                    file_name = kwargs["file_name"]
+
+                if not isinstance(file_name, list):
+                    file_name = [file_name]
+
+                names_with_regexes.append(file_name)
 
             # file ending can be overwritten
             file_ending = cls.file_ending
