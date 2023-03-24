@@ -198,6 +198,15 @@ def test_from_flat_params():
     assert p == correct
 
 
+def test_store_result():
+    p = Parent(param1=Child(type="test123"))
+    p.store_result("hi")
+    assert p.fetch_result() == "hi"
+
+
+
+
+
 if __name__ == "__main__":
     test_type_to_regex()
     #test_union_params()

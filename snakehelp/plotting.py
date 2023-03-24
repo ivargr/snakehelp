@@ -6,6 +6,7 @@ from .hierarchical_results import HierarchicalResults
 import os
 from typing import List
 import itertools
+import pandas as pd
 
 
 @dataclass
@@ -84,7 +85,9 @@ class ParameterCombinations:
 
     def combinations(self, **data):
         """
-        Returns objects of the types in ResultTypes from all combinations of parameters
+        Returns objects of the types in ResultTypes from all combinations of parameters.
+
+        Returna nested list. Eachs sublist contains all objects for a given set of parameters.
         """
         # wrap every data value in list and combine them
         data = {key: at_least_list(value) for key, value in data.items()}
@@ -96,11 +99,33 @@ class ParameterCombinations:
         ]
 
         objects = []
-        for result_type in self.result_types:
-            for combination in combination_dicts:
-                objects.append(result_type.from_flat_params(**combination))
+        for combination in combination_dicts:
+            row = []
+            for result_type in self.result_types:
+                row.append(result_type.from_flat_params(**combination))
+            objects.append(row)
 
         return objects
+
+    def get_results_dataframe(self, **data):
+        """
+        Gets the results specified by result_names from all the parameter combinations.
+        Returns a Pandas Dataframe.
+        """
+        combinations = self.combinations(**data)
+
+        data = []
+
+        for combination in combinations:
+            row = []
+            first_result = combination[0]  # all results should be from the same parameters
+            row.extend(first_result.flat_data())
+            for result in combination:
+                row.append(result.fetch_result())
+            data.append(row)
+
+        names = combinations[0][0].__class__.parameters + [result.__class__.__name__ for result in combinations[0]]
+        return pd.DataFrame(data, columns=names)
 
 
 class Plot:
@@ -118,33 +143,6 @@ class Plot:
         for parameter in self._plot_type.parameter_types():
             assert parameter in self._data, f"The plot type {self._plot_type} requires parameter {parameter} to be specified."
 
-    def get_parameter_combinations(self):
-        # makes a list of all parameter combinations needed for the plot
-        # every element in the list can contain:
-        #  - one element if it is a fixed parameter
-        #  - several elements if is is a variable used in the plot
-
-        # first make combinations with default values
-        default_values = [field.default for field in self._plot_type.get_fields()]
-        names = [field.name for field in self._plot_type.get_fields()]
-        combinations = ParameterCombinations(names, default_values)
-
-        for field in self._plot_type.get_fields():
-            if field.name in self._data:
-                combinations.set(field.name, self._data[field.name])
-
-        return combinations
-
-    def _get_parameter_path(self, parameters: List[str]) -> str:
-        return self._prefix + os.path.sep + os.path.sep.join([str(p) for p in parameters])
-
-    def _get_result_path(self, parameters):
-        return self._get_parameter_path(parameters) + ".txt"
-
-    def get_result(self, parameters: List[str]):
-        file_name = self._get_result_path(parameters, result)
-        return float(open(file_name).read().strip())
-
     def get_data_file_names(self):
         combinations = self.get_parameter_combinations().combinations()
         file_names = []
@@ -152,19 +150,3 @@ class Plot:
             file_names.append(self._get_result_path(combination))
 
         return file_names
-
-    def get_results_dataframe(self):
-        """
-        Gets the results specified by result_names from all the parameter combinations.
-        Returns a Pandas Dataframe.
-        """
-        combinations = self.get_parameter_combinations().combinations()
-        results = []
-
-        for combination in combinations:
-            row = list(combination[:-1])
-            result = self.get_result(combination)
-            row.append(result)
-            results.append(row)
-
-        return pd.DataFrame(results, columns=parameters._names)

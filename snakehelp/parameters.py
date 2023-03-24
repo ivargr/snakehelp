@@ -1,11 +1,13 @@
 import itertools
 import os
 from collections import namedtuple
+from pathlib import Path
 from dataclasses import dataclass, fields
 from types import UnionType
 from typing import get_origin, Literal, Union, get_args
 from snakehelp.snakehelp import classproperty, string_is_valid_type, type_to_regex
 from .config import get_data_folder
+from shared_memory_wrapper import to_file, from_file
 
 
 class ParameterLike:
@@ -128,10 +130,15 @@ def parameters(base_class):
             return data
 
         def path(self):
-            return get_data_folder() + os.path.sep.join(map(str, self.flat_data())) + self.file_ending
+            return get_data_folder() + os.path.sep.join(map(str, self.flat_data())) + os.path.sep + self.__class__.__name__ + self.file_ending
 
         def store_result(self, result):
-            pass
+            path = self.path()
+            Path(path).mkdir(parents=True, exist_ok=True)
+            to_file(result, path)
+
+        def fetch_result(self):
+            return from_file(self.path())
 
         @classmethod
         def from_flat_params(cls, **params):
