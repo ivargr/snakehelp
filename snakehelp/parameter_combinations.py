@@ -1,30 +1,67 @@
 import itertools
-from typing import List
+
+import pandas as pd
+
+from snakehelp.parameters import ParameterLike
+from snakehelp.plotting import at_least_list
 
 
 class ParameterCombinations:
-    def __init__(self, names: List[str], values: List):
-        assert isinstance(values, list) and isinstance(names, list)
-        self._names = names
-        self._values = values
+    def __init__(self, parameter_names, result_types):
+        self.parameter_names = parameter_names
+        self.result_types = result_types
 
-    def __str__(self):
-        return str(self._names) + "\n" + str(self._values)
+        assert all([isinstance(t, str) for t in parameter_names]), "All parameter names must be strings"
+        assert all([issubclass(t, ParameterLike) for t in result_types]), "All result types must be classes that are ParameterLike: %s" % result_types
 
-    @classmethod
-    def from_path(cls, names, path):
-        values = path.split("/")
-        # if path is shorter, we allow fewer names
-        names = names[0:len(values)]
-        assert len(values) == len(names), "Got %d values and %d names" % (len(values), len(names))
-        return cls(names, values)
+    def combinations(self, **data):
+        """
+        Returns objects of the types in ResultTypes from all combinations of parameters.
 
-    def set(self, name, value):
-        assert name in self._names, "Name %s not in hiearchy %s" % (name, self._names)
-        index = self._names.index(name)
-        self._values[index] = value
+        Returna nested list. Eachs sublist contains all objects for a given set of parameters.
+        """
+        # wrap every data value in list and combine them
+        data = {key: at_least_list(value) for key, value in data.items()}
+        values = data.values()
+        combinations = itertools.product(*values)
+        combination_dicts = [
+            {key: value for key, value in zip(data.keys(), combination)}
+            for combination in combinations
+        ]
 
-    def combinations(self):
-        # wrap strs in list to make product work
-        values = [[str(v)] if isinstance(v, (str, int, float)) else v for v in self._values]
-        return [list(i) for i in itertools.product(*values)]
+        objects = []
+        for combination in combination_dicts:
+            row = []
+            for result_type in self.result_types:
+                row.append(result_type.from_flat_params(**combination))
+            objects.append(row)
+
+        return objects
+
+    def get_files(self, **data):
+        """
+        Returns the necessary files for getting the given data.
+        """
+        combinations = self.combinations(**data)
+        files = [o.path() for o in itertools.chain(*combinations)]
+        return files
+
+    def get_results_dataframe(self, **data):
+        """
+        Gets the results specified by result_names from all the parameter combinations.
+        Returns a Pandas Dataframe.
+        """
+        combinations = self.combinations(**data)
+
+        data = []
+
+        for combination in combinations:
+            row = []
+            first_result = combination[0]  # all results should be from the same parameters
+            row.extend(first_result.flat_data())
+            for result in combination:
+                row.append(result.fetch_result())
+            data.append(row)
+
+        names = combinations[0][0].__class__.parameters + [result.__class__.__name__ for result in combinations[0]]
+        return pd.DataFrame(data, columns=names)
