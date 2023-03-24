@@ -1,4 +1,6 @@
 from dataclasses import dataclass
+from typing import Literal
+from .parameter_combinations import ParameterCombinations
 
 
 @dataclass
@@ -15,10 +17,23 @@ class PlotType:
     color: str = None
     labels: str = None
 
-    def validate(self):
+    def __post_init__(self):
+        self._validate()
+
+    def result_types(self):
+        return [t for t in self.dimensions().values() if not isinstance(t, str)]
+
+    def parameter_types(self):
+        return [t for t in self.dimensions().values() if isinstance(t, str)]
+
+    def get_fields(self):
+        # all result types should have the same fields
+        return self.result_types()[0].get_fields()
+
+    def _validate(self):
         # checks that all dimensions are valid and work together
-        result_types = [t for t in self.dimensions().values() if not isinstance(t, str)]
-        parameter_types = [t for t in self.dimensions().values() if isinstance(t, str)]
+        result_types = self.result_types()
+        parameter_types = self.parameter_types()
 
         assert len(result_types) >= 1, "Plot type is invalid. Dere must be at least one result type (not str)"
         assert len(result_types) + len(parameter_types) >= 2, "Plot must have at least two dimensions"
@@ -42,13 +57,46 @@ class PlotType:
             "color": self.color,
             "labels": self.labels
         }
-        return {name: val for name, val in dim if val is not None}
+        return {name: val for name, val in dim.items() if val is not None}
 
-    def make_data_list(self, **data):
-        pass
+    def plot(self, data):
+        return Plot(self, data)
+
+
+class Plot:
+    def __init__(self, plot_type: PlotType, data: dict):
+        self._plot_type = plot_type
+        self._data = data
+        self._validate()
+
+    def _validate(self):
+        for name, value in self._data.items():
+            assert name in self._plot_type.parameter_types(), \
+                f"Specified data parameter {name} is not in the plot type's parameter: {self._plot_types.parameter_types()}"
+
+        for parameter in self._plot_type.parameter_types():
+            assert parameter in self._data, f"The plot type {self._plot_type} requires parameter {parameter} to be specified."
+
+    def get_parameter_combinations(self):
+        # makes a list of all parameter combinations needed for the plot
+        # every element in the list can contain:
+        #  - one element if it is a fixed parameter
+        #  - several elements if is is a variable used in the plot
+
+        # first make combinations with default values
+        default_values = [field.default for field in self._plot_type.get_fields()]
+        names = [field.name for field in self._plot_type.get_fields()]
+        combinations = ParameterCombinations(names, default_values)
+
+        for field in self._plot_type.get_fields():
+            if field.name in self._data:
+                combinations.set(field.name, self._data[field.name])
+
+        return combinations
 
     def get_data_objects(self, **data):
         """
         Initializes the required objects with data necessary for producing the plot.
         """
         pass
+

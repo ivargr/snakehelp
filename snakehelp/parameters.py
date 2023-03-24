@@ -38,16 +38,19 @@ def parameters(base_class):
 
             minimal_children specifies only whether children should be minimal.
             """
-            field_tuple = namedtuple("Field", ["name", "type"])
+            field_tuple = namedtuple("Field", ["name", "type", "default"])
             out = []
             for field in fields(cls):
                 if minimal and get_origin(field.type) == Literal and len(get_args(field.type)) == 1:
                     continue
 
                 if field.type in (int, str, float):
-                    out.append(field_tuple(field.name, field.type))
+                    out.append(field_tuple(field.name, field.type, field.default))
                 elif get_origin(field.type) in (Literal, Union, UnionType):
-                    out.append(field_tuple(field.name, field.type))
+                    default = field.default
+                    if get_origin(field.type) == Literal and len(get_args(field.type)) == 1:
+                        default = get_args(field.type)[0]
+                    out.append(field_tuple(field.name, field.type, default))
                 else:
                     assert hasattr(field.type, "get_fields"), "Field type %s is not valid. " \
                                                               "Must be a base type or a class decorated with @parameters" % field.type
