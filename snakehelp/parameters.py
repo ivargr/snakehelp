@@ -20,6 +20,15 @@ def parameters(base_class):
             return [field.name for field in fields(cls)]
 
         @classmethod
+        def field(cls, name):
+            """
+            Returns the field with given name if it exists
+            """
+            matches = [f for f in fields(cls) if f.name == name]
+            assert len(matches) == 1, f"Tried to access field {name} on {cls}. Does not exist."
+            return matches[0]
+
+        @classmethod
         def get_fields(cls, minimal=False, minimal_children=False):
             """
             Returns a list of tuples (field_name, field_type)
