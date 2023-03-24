@@ -46,7 +46,7 @@ class ParameterCombinations:
         Returns the necessary files for getting the given data.
         """
         combinations = self.combinations(**data)
-        files = [o.path() for o in itertools.chain(*combinations)]
+        files = [o.file_path() for o in itertools.chain(*combinations)]
         return files
 
     def get_results_dataframe(self, **data):

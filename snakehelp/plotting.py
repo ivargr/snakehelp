@@ -22,9 +22,9 @@ class PlotType:
     Defines a plot type. x, y, etc are either strings referring to a field of any @parameter-marked class OR
     a the class of a @result-marked class.
     """
-    type: Literal["bar", "line", "scatter"]
-    x: str
-    y: str
+    type: Literal["bar", "line", "scatter"] = "bar"
+    x: str = None
+    y: str = None
     facet_col: str = None
     facet_row: str = None
     color: str = None
@@ -34,6 +34,10 @@ class PlotType:
 
     def __post_init__(self):
         self._validate()
+
+    @classmethod
+    def from_yaml_dict(cls, yaml_dict):
+        return cls(**yaml_dict)
 
     def result_types(self):
         return [t for t in self.dimensions().values() if not isinstance(t, str)]
