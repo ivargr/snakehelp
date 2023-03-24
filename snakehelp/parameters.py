@@ -8,11 +8,15 @@ from snakehelp.snakehelp import classproperty, string_is_valid_type, type_to_reg
 from .config import get_data_folder
 
 
+class ParameterLike:
+    pass
+
+
 def parameters(base_class):
     """
     Decorator to make a class into a class that can be used as parameters.
     """
-    class Parameters(dataclass(base_class)):
+    class Parameters(dataclass(base_class), ParameterLike):
         file_ending = base_class.file_ending if hasattr(base_class, "file_ending") else ""
 
         @classproperty
@@ -107,6 +111,46 @@ def parameters(base_class):
         def path(cls, **kwargs):
             return cls.as_output(**kwargs)
 
+        def data(self):
+            data = []
+            for field in fields(self.__class__):
+                data.append(getattr(self, field.name))
+            return data
+
+        def flat_data(self):
+            data = []
+            for element in self.data():
+                if isinstance(element, ParameterLike):
+                    data.extend(element.flat_data())
+                else:
+                    assert isinstance(element, (int, str, float)), "Invalid type %s" % type(element)
+                    data.append(element)
+            return data
+
+        def path(self):
+            return get_data_folder() + os.path.sep.join(map(str, self.flat_data())) + self.file_ending
+
+        def store_result(self, result):
+            pass
+
+        @classmethod
+        def from_flat_params(cls, **params):
+            """
+            Creates an object from keyword arguments.
+            Keyword arguments may specify a parameter in a subobject.
+            """
+            data = {}
+            for field in fields(cls):
+                if hasattr(field.type, "get_fields"):
+                    data[field.name] = field.type.from_flat_params(**params)
+                else:
+                    if field.name in params:
+                        data[field.name] = params[field.name]
+                    else:
+                        data[field.name] = field.default
+
+            return cls(**data)
+
         @classmethod
         def as_output(cls, **kwargs):
             """
@@ -173,3 +217,8 @@ def parameters(base_class):
     Parameters.__qualname__ = base_class.__qualname__
 
     return Parameters
+
+
+def get_path_from_flat_parameter_list(parameters):
+    pass
+

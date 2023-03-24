@@ -37,18 +37,28 @@ default_values = {
 }
 
 
-def test():
-    print(MappingRecall.get_fields())
+def test_plot_type():
     plot_type = PlotType("bar", x="method_name", y=MappingRecall, facet_col="read_length")
-
-    print(plot_type.parameter_types())
 
     with pytest.raises(AssertionError):
         plot_type = PlotType("bar", x="method_name", y=MappingRecall, facet_col="read_length", facet_row="test123")
 
     plot = plot_type.plot({"method_name": ["bwa", "minimap"], "read_length": [50, 100, 150]})
+    print(plot.get_data_file_names())
 
-    parameter_combinations = plot.get_parameter_combinations()
-    print(parameter_combinations)
-    print(parameter_combinations.combinations())
+    assert plot.get_data_file_names() == ['data/hg38/50/something/bwa/4/recall.txt',
+                                          'data/hg38/50/something/minimap/4/recall.txt', 'data/hg38/100/something/bwa/4/recall.txt',
+                                          'data/hg38/100/something/minimap/4/recall.txt', 'data/hg38/150/something/bwa/4/recall.txt',
+                                          'data/hg38/150/something/minimap/4/recall.txt']
+
+def test_simple_plot():
+    recall1 = MappingRecall(method="bwa").store_result(0.5)
+    recall2 = MappingRecall(method="minimap2").store_result(0.7)
+
+    plot_type = PlotType("bar", x="method_name", y=MappingRecall)
+    plot = plot_type.plot({"method_name": ["bwa", "minimap"]})
+    df = plot.get_results_dataframe()
+    print(df)
+
+
 

@@ -137,15 +137,15 @@ def test_minimal_parameters():
 
 @parameters
 class Child:
-    type: str
-    ending: Literal["file.txt"]
+    type: str = "test"
+    ending: Literal["file.txt"] = "file.txt"
 
 
 @parameters
 class Parent:
-    param1: Child
-    param2: int
-    ending: Literal["results.txt"]
+    param1: Child = Child()
+    param2: int = 3
+    ending: Literal["results.txt"] = "results.txt"
 
 
 @pytest.mark.skip("Not relevant, wrong")
@@ -182,6 +182,24 @@ def test_file_ending():
     assert ParamWithFileEnding.as_output(param1="test", param2=3, file_ending=[".txt", ".csv"]) == ["test/3.txt", "test/3.csv"]
 
 
+def test_parameter_objects():
+    o = ParamWithFileEnding(param1="test", param2=3)
+    assert o.data() == ["test", 3], o.data()
+
+    o_nested = Parent(param1=Child(type="test", ending="file.txt"), param2=3, ending="results.txt")
+    print(o_nested.data())
+    assert o_nested.flat_data() == ["test", "file.txt", 3, "results.txt"]
+    assert o.path() == os.path.sep.join(["test", "3"])  + ".txt"
+
+
+def test_from_flat_params():
+    p = Parent.from_flat_params(type="test123")
+    correct = Parent(param1=Child(type="test123"))
+    assert p == correct
+
+
 if __name__ == "__main__":
     test_type_to_regex()
     #test_union_params()
+
+

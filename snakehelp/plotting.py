@@ -1,6 +1,11 @@
 from dataclasses import dataclass
 from typing import Literal
-from .parameter_combinations import ParameterCombinations
+#from .parameter_combinations import ParameterCombinations
+from .parameters import ParameterLike
+from .hierarchical_results import HierarchicalResults
+import os
+from typing import List
+import itertools
 
 
 @dataclass
@@ -63,11 +68,47 @@ class PlotType:
         return Plot(self, data)
 
 
+def at_least_list(element):
+    if isinstance(element, list):
+        return element
+    return [element]
+
+
+class ParameterCombinations:
+    def __init__(self, parameter_names, result_types):
+        self.parameter_names = parameter_names
+        self.result_types = result_types
+
+        assert all([isinstance(t, str) for t in parameter_names]), "All parameter names must be strings"
+        assert all([issubclass(t, ParameterLike) for t in result_types]), "All result types must be classes that are ParameterLike: %s" % result_types
+
+    def combinations(self, **data):
+        """
+        Returns objects of the types in ResultTypes from all combinations of parameters
+        """
+        # wrap every data value in list and combine them
+        data = {key: at_least_list(value) for key, value in data.items()}
+        values = data.values()
+        combinations = itertools.product(*values)
+        combination_dicts = [
+            {key: value for key, value in zip(data.keys(), combination)}
+            for combination in combinations
+        ]
+
+        objects = []
+        for result_type in self.result_types:
+            for combination in combination_dicts:
+                objects.append(result_type.from_flat_params(**combination))
+
+        return objects
+
+
 class Plot:
     def __init__(self, plot_type: PlotType, data: dict):
         self._plot_type = plot_type
         self._data = data
         self._validate()
+        self._prefix = 'data'
 
     def _validate(self):
         for name, value in self._data.items():
@@ -94,9 +135,36 @@ class Plot:
 
         return combinations
 
-    def get_data_objects(self, **data):
-        """
-        Initializes the required objects with data necessary for producing the plot.
-        """
-        pass
+    def _get_parameter_path(self, parameters: List[str]) -> str:
+        return self._prefix + os.path.sep + os.path.sep.join([str(p) for p in parameters])
 
+    def _get_result_path(self, parameters):
+        return self._get_parameter_path(parameters) + ".txt"
+
+    def get_result(self, parameters: List[str]):
+        file_name = self._get_result_path(parameters, result)
+        return float(open(file_name).read().strip())
+
+    def get_data_file_names(self):
+        combinations = self.get_parameter_combinations().combinations()
+        file_names = []
+        for combination in combinations:
+            file_names.append(self._get_result_path(combination))
+
+        return file_names
+
+    def get_results_dataframe(self):
+        """
+        Gets the results specified by result_names from all the parameter combinations.
+        Returns a Pandas Dataframe.
+        """
+        combinations = self.get_parameter_combinations().combinations()
+        results = []
+
+        for combination in combinations:
+            row = list(combination[:-1])
+            result = self.get_result(combination)
+            row.append(result)
+            results.append(row)
+
+        return pd.DataFrame(results, columns=parameters._names)

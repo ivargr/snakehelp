@@ -13,6 +13,9 @@ class HierarchicalResults:
         self._parameter_names = parameter_names
         self._result_names = result_names
 
+    def __str__(self):
+        return "HierarchicalResults with parameters %s and results %s" % (self._parameter_names, self._result_names)
+
     def get_names(self):
         return self._parameter_names
 
@@ -33,10 +36,16 @@ class HierarchicalResults:
         file_names = []
         combinations = parameters.combinations()
         for combination in combinations:
+            # when no result names, last element in combination is result name
+            if len(result_names) == 0:
+                result_names = [combination[-1]]
+                combination = combination[:-1]
+
             for result_name in result_names:
                 file_names.append(self._get_result_path(combination, result_name))
 
         return file_names
+        #return [self._prefix + os.path.sep + f for f in file_names]
 
     def get_results_dataframe(self, parameters: ParameterCombinations, result_names):
         """
