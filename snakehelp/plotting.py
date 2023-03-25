@@ -72,7 +72,7 @@ class PlotType:
             "x": self.x,
             "y": self.y,
             "facet_col": self.facet_col,
-            "facet_row:": self.facet_row,
+            "facet_row": self.facet_row,
             "color": self.color,
             "labels": self.labels
         }
