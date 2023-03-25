@@ -54,7 +54,7 @@ class PlotType:
         result_types = self.result_types()
         parameter_types = self.parameter_types()
 
-        assert len(result_types) >= 1, "Plot type is invalid. Dere must be at least one result type (not str)"
+        assert len(result_types) >= 1, f"Plot type {self} is invalid. Dere must be at least one result type (not str). Parameters specified: {parameter_types}"
         assert len(result_types) + len(parameter_types) >= 2, "Plot must have at least two dimensions"
 
         # Check that result types are compatible, i.e. have the same fields
@@ -92,9 +92,10 @@ class Plot:
         self._parameter_combinations = ParameterCombinations(self._plot_type.parameter_types(), self._plot_type.result_types())
 
     def _validate(self):
+        possible_fields = [f.name for f in self._plot_type.get_fields()]
         for name, value in self._data.items():
-            assert name in self._plot_type.parameter_types(), \
-                f"Specified data parameter {name} is not in the plot type's parameter: {self._plot_type.parameter_types()}"
+            assert name in possible_fields, \
+                f"Specified data parameter {name} is not in the possible fields that can be specified for generating the data: {possible_fields}"
 
         for parameter in self._plot_type.parameter_types():
             assert parameter in self._data, f"The plot type {self._plot_type} requires parameter {parameter} to be specified."
