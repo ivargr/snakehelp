@@ -252,7 +252,6 @@ def parameters(base_class):
                 print(out_files)
                 raise
 
-            print(out_files)
             if len(out_files) == 1:
                 return out_files[0]
             else:

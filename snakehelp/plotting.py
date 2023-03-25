@@ -116,9 +116,6 @@ class Plot:
 
         specification = {}
         for dimension, value in self._plot_type.dimensions().items():
-            print(dimension, value)
-            print(type(value))
-
             if type(value) != str and issubclass(value, ParameterLike):
                 value = value.file_name
             specification[dimension] = value
