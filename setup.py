@@ -11,7 +11,7 @@ test_requirements = ['pytest>=3', "hypothesis", "pandas", "numpy", "shared_memor
 setup(
     author="Ivar Grytten",
     author_email='ivar.grytten@gmail.com',
-    python_requires='>=3.8',
+    python_requires='>=3.10',
     classifiers=[
         'Development Status :: 2 - Pre-Alpha',
         'Intended Audience :: Developers',
