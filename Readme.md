@@ -2,7 +2,7 @@
 
 # Snakehelp
 
-A small Python package for making writing Snakemake pipelines easier to write, easier to maintain and with fewer bugs.
+A small Python package for making Snakemake pipelines easier to write and maintain.
 
 ## Installation
 
