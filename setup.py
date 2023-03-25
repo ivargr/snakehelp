@@ -20,7 +20,7 @@ setup(
         'Programming Language :: Python :: 3.10',
     ],
     description="Snakehelp: Making snakemake easier to use.",
-    long_description=" ",
+    long_description="Snakehelp",
     install_requires=requirements,
     license="MIT license",
     include_package_data=True,
