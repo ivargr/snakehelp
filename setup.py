@@ -4,7 +4,7 @@
 
 from setuptools import setup, find_packages
 
-requirements = ["pandas", "numpy", "pathos", "shared_memory_wrapper", "plotly", "tabulate"]
+requirements = ["pandas", "numpy", "pathos", "shared_memory_wrapper", "kaleido", "plotly", "tabulate"]
 
 test_requirements = ['pytest>=3', "hypothesis"]
 
