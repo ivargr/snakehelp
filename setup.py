@@ -4,9 +4,9 @@
 
 from setuptools import setup, find_packages
 
-requirements = [ ]
+requirements = ["pandas", "numpy", "shared_memory_wrapper", "plotly"]
 
-test_requirements = ['pytest>=3', "hypothesis", "pandas", "numpy", "shared_memory_wrapper", "plotly"]
+test_requirements = ['pytest>=3', "hypothesis"]
 
 setup(
     author="Ivar Grytten",
