@@ -12,7 +12,7 @@ with open('HISTORY.rst') as history_file:
 
 requirements = [ ]
 
-test_requirements = ['pytest>=3', "hypothesis", "pandas", "numpy", "shared_memory_wrapper"]
+test_requirements = ['pytest>=3', "hypothesis", "pandas", "numpy", "shared_memory_wrapper", "plotly"]
 
 setup(
     author="Ivar Grytten",

@@ -155,15 +155,22 @@ def parameters(base_class):
             return get_data_folder() + os.path.sep.join(map(str, self.flat_data())) + file_name + self.file_ending
 
         def store_result(self, result):
-            #path = self.file_path()
-            #Path(path).mkdir(parents=True, exist_ok=True)
-            with open(path, "w") as f:
-                f.write(result)
+            file = self.file_path()
+            path = os.path.sep.join(file.split(os.path.sep)[:-1])
+            Path(path).mkdir(parents=True, exist_ok=True)
+            with open(file, "w") as f:
+                f.write(str(result))
             #to_file(result, path)
 
         def fetch_result(self):
             with open(self.file_path()) as f:
-                return float(f.read().strip())
+                data = f.read().strip()
+                try:
+                    data = float(data)
+                except ValueError:
+                    data = data
+
+                return data
             #return from_file(self.file_path())
 
         @classmethod
