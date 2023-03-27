@@ -99,3 +99,36 @@ rule test_something:
 
 Note that `file_path()` can be called on objects to create an actual path, and `path()` can be called on the classes to generate a wildcard path.
 
+
+## Gathering results and plotting
+
+Snakehelp can also help you gather results produced by rules into a Pandas dataframe.
+
+Assume you have some results that depend on a set of parameters:
+
+```python
+
+class SomeResult:
+    param1: int
+    param2: str
+    param3: Literal["a", "b", "c"]
+    param4: float
+    file_ending = ".csv"
+```
+
+You typically have a rule that creates some results from these parameters:
+
+```snakemake
+rule RunSomeAnalysis:
+    output:
+        SomeResult.path()
+    run:
+        # do some analysis
+        # write to SomeResult
+        with open(output[0], "w") as f:
+            f.write(123)
+```
+
+(This section has not been finished written)
+
+
