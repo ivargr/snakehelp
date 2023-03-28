@@ -103,7 +103,7 @@ class Plot:
     def file_names(self):
         return self._parameter_combinations.get_files(**self._data)
 
-    def plot(self):
+    def plot(self, pretty_names_func=None):
         df = self._parameter_combinations.get_results_dataframe(**self._data)
         df.to_csv(self._out_base_name + ".csv", index=False)
 
@@ -131,8 +131,9 @@ class Plot:
         fig = func(df, **specification, template="simple_white", title=title)
 
         # prettier facet titles, names, etc
-        #fig.for_each_annotation(lambda a: a.update(text=pretty_name(a.text.split("=")[-1])))
-        #fig.for_each_trace(lambda t: t.update(name=pretty_name(t.name)))
+        if pretty_names_func is not None:
+            fig.for_each_annotation(lambda a: a.update(text=pretty_names_func(a.text.split("=")[-1])))
+            fig.for_each_trace(lambda t: t.update(name=pretty_names_func(t.name)))
 
         if "text" in specification:
             fig.update_traces(textposition="bottom right")
