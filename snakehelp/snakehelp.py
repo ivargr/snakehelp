@@ -32,7 +32,7 @@ def type_to_regex(type):
     if type == str:
         return "\\w+"
     if get_origin(type) == Literal:
-        return "|".join([re.escape(arg) for arg in get_args(type)])
+        return "|".join([re.escape(str(arg)) for arg in get_args(type)])
     elif get_origin(type) in (Union, UnionType):
         if all(is_base_type(t) for t in get_args(type)):
             # all types are base type, we can give a regex for each
