@@ -1,0 +1,31 @@
+from snakehelp import parameters
+
+
+@parameters
+class GenomeBuild:
+    id: str = "hg38"
+
+
+@parameters
+class Genome:
+    genome_build: GenomeBuild
+
+
+@parameters
+class Reads:
+    genome: Genome
+    param1: int = 5
+    param2: float = 2.3
+    read_length: int = 10
+
+
+rule map_reads:
+    input:
+        Reads.path(param1=5) + "/reads.bam"
+        #"data/{genome}/{param1}/{read_length}/"
+
+
+rule test:
+    output:
+        Reads.from_flat_params(id="hg19").file_path()
+        #data/hg38/5/2.3

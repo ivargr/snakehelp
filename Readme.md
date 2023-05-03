@@ -1,3 +1,4 @@
+[![Test of snakemake pipeline]( https://github.com/bioinf-benchmarking/mapping-benchmarking/actions/workflows/test.yml/badge.svg)](https://github.com/bioinf-benchmarking/mapping-benchmarking/actions/workflows/test.yml)
 
 
 # Snakehelp
