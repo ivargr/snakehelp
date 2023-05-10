@@ -3,7 +3,7 @@ import os
 from collections import namedtuple
 from pathlib import Path
 from dataclasses import dataclass, fields
-from types import UnionType
+#from types import UnionType
 from typing import get_origin, Literal, Union, get_args
 from snakehelp.snakehelp import classproperty, string_is_valid_type, type_to_regex
 from .config import get_data_folder
@@ -71,7 +71,7 @@ def parameters(base_class):
 
                 if field.type in (int, str, float):
                     out.append(field_tuple(field.name, field.type, field.default))
-                elif get_origin(field.type) in (Literal, Union, UnionType):
+                elif get_origin(field.type) in (Literal, Union):
                     default = field.default
                     if get_origin(field.type) == Literal and len(get_args(field.type)) == 1:
                         default = get_args(field.type)[0]

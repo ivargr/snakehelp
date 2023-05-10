@@ -1,7 +1,7 @@
 import os
 from collections import namedtuple
 from dataclasses import dataclass, fields
-from types import UnionType
+#from types import UnionType
 from typing import Literal, get_origin, get_args, Union
 import re
 
@@ -33,7 +33,7 @@ def type_to_regex(type):
         return "\\w+"
     if get_origin(type) == Literal:
         return "|".join([re.escape(str(arg)) for arg in get_args(type)])
-    elif get_origin(type) in (Union, UnionType):
+    elif get_origin(type) in (Union,):
         if all(is_base_type(t) for t in get_args(type)):
             # all types are base type, we can give a regex for each
             return "|".join([type_to_regex(t) for t in get_args(type)])
@@ -60,7 +60,7 @@ def string_is_valid_type(string, type):
             return False
     elif get_origin(type) == Literal:
         return string in get_args(type)
-    elif get_origin(type) in [Union, UnionType]:
+    elif get_origin(type) in [Union]:
         return any((string_is_valid_type(string, t) for t in get_args(type)))
     elif is_parameter_type(type):
         return isinstance(string, str)
