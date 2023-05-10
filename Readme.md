@@ -38,7 +38,7 @@ from typing import Literal
 @parameters
 class SimulatedData:
     param1: str = "some_default_value"
-    param2: float = "3.14"
+    param2: float = 3.14
     param3: Literal["a", "b", "c"] = "a"
     param4: int = 100
     file_ending = ".csv"
