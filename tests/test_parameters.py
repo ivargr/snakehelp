@@ -136,7 +136,7 @@ class ParamsWithHierarchcicalUnion:
 
 def test_union_and_hierarchical():
     assert ParamsWithHierarchcicalUnion.parameters == ["name", "config", "ending"]
-    assert ParamsWithHierarchcicalUnion.as_output() == r"{name,\w+}/{config,.*}/{ending,\w+}"
+    assert ParamsWithHierarchcicalUnion.as_output() == r"{name,\w+}/{config_unknown_union_params,.*}/{ending,\w+}"
 
 
 def test_as_output_with_arguments():
@@ -226,8 +226,27 @@ def test_result_decorator():
     assert SomeResult().file_path() == "test/SomeResult.txt"
 
 
-if __name__ == "__main__":
-    test_type_to_regex()
-    #test_union_params()
+
+@parameters
+class RealData:
+    source: str
+    a: int
+    b: int
+
+@parameters
+class SimulatedData:
+    source: str
+    c: float
+
+@parameters
+class UnionData:
+    data: Union[RealData, SimulatedData]
+    d: str
+
+
+def test_union_with_shared_subparams():
+    path = UnionData.path()
+    correct = "{source,\w+}/{data_unknown_union_params,.*}/{d,\w+}"
+    assert path == correct
 
 

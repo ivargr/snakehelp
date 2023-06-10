@@ -32,6 +32,28 @@ def result(base_class):
     return Result
 
 
+def union_type_to_regex(field):
+    name = field.name
+    type = field.type
+    args = get_args(type)
+
+    for field in args:
+        assert hasattr(field, "get_fields"), "UNion only supported for ParameterLike objects now" + str(field)
+
+    out = []
+    # check if the different types in args share fields
+    for i, fields in enumerate(zip(*[arg.get_fields(minimal_children=True) for arg in args])):
+        if all(field.name == fields[0].name for field in fields):
+            # all fields have the same name, we can merge them
+            out.append(["{" + fields[0].name + "," + type_to_regex(fields[0].type) + "}"])
+        else:
+            # no more shared fields at beginning, don't try to look for more
+            break
+    # add one wildcard for the rest if there are more
+    out.append(["{" + name + "_unknown_union_params,.*}"])
+    return out
+
+
 def parameters(base_class):
     """
     Decorator to make a class into a class that can be used as parameters.
@@ -227,6 +249,10 @@ def parameters(base_class):
                     if get_origin(field.type) == Literal and len(get_args(field.type)) == 1:
                         # literal types enforces a single value, should not be wildcards
                         names_with_regexes.append([get_args(field.type)[0]])
+                    elif get_origin(field.type) == Union and all(hasattr(t, "get_fields") for t in get_args(field.type)):
+                        # UnionType with Parameterlike objects. We want to keep common subfields
+                        # if all types start with same fields, we want to keep them
+                        names_with_regexes.extend(union_type_to_regex(field))
                     else:
                         names_with_regexes.append(["{" + field.name + "," + type_to_regex(field.type) + "}"])
 
