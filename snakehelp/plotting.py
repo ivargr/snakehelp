@@ -12,7 +12,10 @@ from snakehelp.parameter_combinations import ParameterCombinations
 plotting_functions = {
     "bar": px.bar,
     "line": px.line,
-    "scatter": px.scatter
+    "scatter": px.scatter,
+    "scat": px.scatter,
+    "box": px.box,
+    "violin": px.violin
 }
 
 
@@ -22,7 +25,7 @@ class PlotType:
     Defines a plot type. x, y, etc are either strings referring to a field of any @parameter-marked class OR
     a the class of a @result-marked class.
     """
-    type: Literal["bar", "line", "scatter"] = "bar"
+    type: Literal["bar", "line", "scatter", "box", "violin"] = "bar"
     x: str = None
     y: str = None
     facet_col: str = None
@@ -126,7 +129,7 @@ class Plot:
             assert self._plot_type.labels is not None, "When markers: True, you need to define labels in the plot config"
             specification["text"] = self._plot_type.labels
 
-        assert self._plot_type.type in plotting_functions, "Plot type %s not supported"
+        assert self._plot_type.type in plotting_functions, "Plot type %s not supported" % self._plot_type.type
         func = plotting_functions[self._plot_type.type]
         fig = func(df, **specification, template="simple_white", title=title)
 
