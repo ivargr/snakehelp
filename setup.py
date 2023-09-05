@@ -30,6 +30,6 @@ setup(
     test_suite='tests',
     tests_require=test_requirements,
     url='https://github.com/ivargr/snakehelp',
-    version='0.0.14',
+    version='0.0.15',
     zip_safe=False,
 )
