@@ -42,15 +42,40 @@ def union_type_to_regex(field):
 
     out = []
     # check if the different types in args share fields
-    for i, fields in enumerate(zip(*[arg.get_fields(minimal_children=True) for arg in args])):
+    all_fields = list(zip(*[arg.get_fields(minimal_children=True) for arg in args]))
+    i = 0
+    for i, fields in enumerate(all_fields):
         if all(field.name == fields[0].name for field in fields):
             # all fields have the same name, we can merge them
             out.append(["{" + fields[0].name + "," + type_to_regex(fields[0].type) + "}"])
         else:
             # no more shared fields at beginning, don't try to look for more
             break
+
+    # todo: Also look for shared fields at the end
+    # make new all_fields which is zipped from the end
+    add_at_end = []
+    if i < len(all_fields)-1:
+        all_fields_from_end = list(zip(*[arg.get_fields(minimal_children=True)[::-1] for arg in args]))
+        # some fields left at end
+        for j, fields in enumerate(all_fields_from_end):
+            if len(add_at_end) + len(out) == len(all_fields):
+                # we have added all fields
+                break
+
+            if all(field.name == fields[0].name for field in fields):
+                # all fields have the same name, we can merge them
+                add_at_end.insert(0, ["{" + fields[0].name + "," + type_to_regex(fields[0].type) + "}"])
+            else:
+                break
+
+    # if fewer fields than all are added, there are some that don't match at the middle
+    if len(out) + len(add_at_end) < len(all_fields):
+        out.append(["{" + name + "_unknown_union_params,.*}"])
+
+    out.extend(add_at_end)
+
     # add one wildcard for the rest if there are more
-    out.append(["{" + name + "_unknown_union_params,.*}"])
     return out
 
 

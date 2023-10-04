@@ -250,3 +250,30 @@ def test_union_with_shared_subparams():
     assert path == correct
 
 
+@parameters
+class RealData2:
+    source: str
+    a: int
+    b: int
+    some_end: str
+
+
+@parameters
+class SimulatedData2:
+    source: str
+    c: float
+    some_end: str
+
+
+@parameters
+class UnionData2:
+    data: Union[RealData2, SimulatedData2]
+    d: str
+
+
+def test_union_with_shared_params_at_start_and_end():
+    path = UnionData2.path()
+    correct = "{source,\w+}/{data_unknown_union_params,.*}/{some_end,\w+}/{d,\w+}"
+    assert path == correct
+
+
