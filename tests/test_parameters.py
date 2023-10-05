@@ -4,7 +4,7 @@ from snakehelp import parameters
 from snakehelp.parameters import result
 from snakehelp.snakehelp import type_to_regex
 from typing import Literal, Union
-
+import dataclasses
 
 class WildcardMock:
     """Behaves as a Snakemake wildcards object. Initialize with kwargs."""
@@ -260,32 +260,100 @@ class RealData2:
 
 @parameters
 class SimulatedData2:
-    source: str
-    c: float
-    some_end: str
+    source: str = "test"
+    c: float = 0.1
+    some_end: str = "test2"
 
 
 @parameters
 class UnionData2:
-    data: Union[RealData2, SimulatedData2]
-    d: str
+    some_data: Union[RealData2, SimulatedData2]
+    d: str = "test3"
 
 
 def test_union_with_shared_params_at_start_and_end():
     path = UnionData2.path()
-    correct = "{source,\w+}/{data_unknown_union_params,.*}/{some_end,\w+}/{d,\w+}"
+    correct = "{source,\w+}/{some_data_unknown_union_params,.*}/{some_end,\w+}/{d,\w+}"
     assert path == correct
 
 
-
 def test_union_choices():
-    fields = UnionData2.get_fields(union_choices=[RealData2])
+    UnionData2.limit_union_choice('RealData2')
+    fields = UnionData2.get_fields()
     names = [field.name for field in fields]
     assert names == ["source", "a", "b", "some_end", "d"]
 
     for field in fields:
         print(field)
 
-    fields = UnionData2.get_fields(union_choices=[SimulatedData2])
+    UnionData2.clear_union_choices()
+    UnionData2.limit_union_choice('SimulatedData2')
+
+    fields = UnionData2.get_fields()
     names = [field.name for field in fields]
     assert names == ["source", "c", "some_end", "d"]
+
+
+@parameters
+class UnionDataWrapper:
+    param0: UnionData2
+    param1: str
+
+
+def test_change_parameter_field():
+    a = UnionData2
+    print(dataclasses.fields(a))
+    new = parameters(dataclasses.make_dataclass('UnionData2', fields=((f.name, f.type, f) for f in dataclasses.fields(a))))
+    print(new)
+    print(new.get_fields())
+
+
+
+def test_fields():
+    d = UnionData2
+    fields = d.fields()
+    names = [field.name for field in fields]
+    for field in fields:
+        print(field)
+
+    assert names == ["some_data", "d"]
+
+    d = UnionData2
+    d.limit_union_choice("SimulatedData2")
+    fields = d.fields()
+    print()
+    print(fields)
+
+    types = [f.type for f in fields]
+    assert types == [SimulatedData2, str]
+
+
+    obj = UnionData2.from_flat_params()
+    print(obj.file_path())
+
+    obj2 = eval('UnionData2').from_flat_params()
+    print(obj2.file_path())
+
+
+
+@parameters
+class SomeSubType:
+    test1: str = "test"
+    test2: int = 0
+
+@parameters
+class SomeType:
+    a: int = 0
+    b: SomeSubType = None
+    c: int = 0
+
+
+def test_replace_field():
+    c = SomeType
+    for field in c.fields():
+        print(field)
+
+    new = c.replace_field("test1", ("test1", int, 5))
+    print(new.fields())
+    types = [f.type for f in new.get_fields()]
+    assert types == [int, int, int, int]

@@ -50,7 +50,8 @@ class PlotType:
 
     def get_fields(self):
         # all result types should have the same fields
-        return self.result_types()[0].get_fields()
+        fields = self.result_types()[0].get_fields()
+        return fields
 
     def _validate(self):
         # checks that all dimensions are valid and work together

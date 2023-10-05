@@ -18,6 +18,9 @@ class ResultLike:
     pass
 
 
+field_tuple = namedtuple("Field", ["name", "type", "default"])
+
+
 def result(base_class):
     class Result(parameters(base_class)):
         """
@@ -86,6 +89,7 @@ def parameters(base_class):
     class Parameters(dataclass(base_class), ParameterLike):
         file_name = base_class.file_name if hasattr(base_class, "file_name") else None
         file_ending = base_class.file_ending if hasattr(base_class, "file_ending") else ""
+        _union_choices = []
 
         @classproperty
         def _field_names(cls):
@@ -100,8 +104,30 @@ def parameters(base_class):
             assert len(matches) == 1, f"Tried to access field {name} on {cls}. Does not exist."
             return matches[0]
 
+        def get_field(cls, name):
+            """Returns a field by name"""
+            matches = [f for f in self.fields(cls) if f.name == name]
+            assert len(matches) == 1
+            return matches[0]
+
         @classmethod
-        def get_fields(cls, minimal=False, minimal_children=False, union_choices: Optional[List] = None):
+        def fields(cls):
+            """Simple wrapper around dataclasses fields. Only difference is that Union types can be limited"""
+            f = dataclasses.fields(cls)
+            out = []
+            for field in f:
+                if get_origin(field.type) == Union:
+                    # check if this union type has been limited
+                    # this union type has been limited, replace it with the limited type
+                    limited_types = [t for t in get_args(field.type) if get_class_name(t) in cls._union_choices]
+                    if len(limited_types) == 1:
+                        out.append(field_tuple(name=field.name, type=limited_types[0], default=field.default))
+                        continue
+                out.append(field)
+            return out
+
+        @classmethod
+        def get_fields(cls, minimal=False, minimal_children=False):
             """
             Returns a list of tuples (field_name, field_type)
 
@@ -110,35 +136,38 @@ def parameters(base_class):
 
             minimal_children specifies only whether children should be minimal.
             """
-            field_tuple = namedtuple("Field", ["name", "type", "default"])
             out = []
-            for field in fields(cls):
+            for field in cls.fields():
                 if minimal and get_origin(field.type) == Literal and len(get_args(field.type)) == 1:
                     continue
 
                 if field.type in (int, str, float):
                     out.append(field_tuple(field.name, field.type, field.default))
                 elif get_origin(field.type) in (Literal, Union):
-                    if get_origin(field.type) == Union and union_choices is not None and set(get_args(field.type)).intersection(union_choices):
-                        # field type is Union but one of the fields is matching against a union choice
-                        choice = set(get_args(field.type)).intersection(union_choices).pop()
-                        if hasattr(choice, "get_fields"):
-                            # preferred choice can be unpacked further
-                            out.extend(
-                                choice.get_fields(minimal=minimal_children, minimal_children=minimal_children))
-                        else:
-                            out.append(field_tuple(field.name, choice, field.default))
-                    else:
-                        default = field.default
-                        if get_origin(field.type) == Literal and len(get_args(field.type)) == 1:
-                            default = get_args(field.type)[0]
-                        out.append(field_tuple(field.name, field.type, default))
+                    default = field.default
+                    if get_origin(field.type) == Literal and len(get_args(field.type)) == 1:
+                        default = get_args(field.type)[0]
+                    out.append(field_tuple(field.name, field.type, default))
                 else:
                     assert hasattr(field.type, "get_fields"), "Field type %s is not valid. " \
                                                               "Must be a base type or a class decorated with @parameters" % field.type
                     out.extend(field.type.get_fields(minimal=minimal_children, minimal_children=minimal_children))
 
             return out
+
+        @classmethod
+        def limit_union_choice(cls, type: str):
+            """After adding type, this type will be picked when multiple choices are possible in a Union-type
+            (when getting fields, etc)
+            !!! Very experimental, should not be used. Better to use replace_field
+            """
+            assert isinstance(type, str)
+            print("Limiting union choice to %s on %s" % (type, cls))
+            cls._union_choices.append(type)
+
+        @classmethod
+        def clear_union_choices(cls):
+            cls._union_choices = []
 
         @classproperty
         def parameters(cls):
@@ -191,7 +220,7 @@ def parameters(base_class):
 
         def data(self):
             data = []
-            for field in fields(self.__class__):
+            for field in self.__class__.fields():
                 data.append(getattr(self, field.name))
             return data
 
@@ -237,16 +266,17 @@ def parameters(base_class):
             Keyword arguments may specify a parameter in a subobject.
             """
             data = {}
-            for field in fields(cls):
+            for field in cls.fields():  #fields(cls):
                 if hasattr(field.type, "get_fields"):
                     data[field.name] = field.type.from_flat_params(**params)
                 else:
                     if field.name in params:
                         data[field.name] = params[field.name]
                     else:
-                        assert not isinstance(field.default, dataclasses._MISSING_TYPE), \
-                            f"Field {field.name} in class {cls} does not have a default value " \
-                            f"set and no value was provided for it when calling from_flat_params."
+                        if isinstance(field.default, dataclasses._MISSING_TYPE):
+                            print(f"Field {field.name} in class {cls} does not have a default value " \
+                            f"set and no value was provided for it when calling from_flat_params.")
+                            raise Exception()
                         data[field.name] = field.default
 
             return cls(**data)
@@ -327,10 +357,30 @@ def parameters(base_class):
 
             #return os.path.sep.join(names_with_regexes)
 
+        @classmethod
+        def replace_field(cls, field_name: str, new_field):
+            """Replaces a field and returns a new class with the field replaced.
+            Operates recursively and matches using the field name."""
+            new_fields = []
+            for field in cls.get_fields():
+                if field.name == field_name:
+                    new_fields.append(new_field)
+                elif hasattr(field.type, "replace_field"):
+                    new_fields.append(field_tuple(field.name, field.type.replace_field(field_name, new_field), field.default))
+                else:
+                    new_fields.append(field)
+
+            return parameters(dataclasses.make_dataclass(cls.__name__, new_fields))
+
     Parameters.__name__ = base_class.__name__
     Parameters.__qualname__ = base_class.__qualname__
 
     return Parameters
+
+
+def get_class_name(cls):
+    full_name = cls.__name__
+    return full_name.split(".")[-1]
 
 
 def get_path_from_flat_parameter_list(parameters):
