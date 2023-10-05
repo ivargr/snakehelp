@@ -68,7 +68,7 @@ class PlotType:
                 f"{result_type.parameters} != {parameters}. These results cannot be plotted together."
 
         for parameter in parameter_types:
-            assert parameter in parameters, f"Parameter {parameter} is not a valid parameter for generating {result_types[0]}"
+            assert parameter in parameters, f"Parameter {parameter} is not a valid parameter for generating {result_types[0]}. Valid parameters are {parameters}"
 
     def dimensions(self):
         dim = {

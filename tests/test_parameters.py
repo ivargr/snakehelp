@@ -277,3 +277,15 @@ def test_union_with_shared_params_at_start_and_end():
     assert path == correct
 
 
+
+def test_union_choices():
+    fields = UnionData2.get_fields(union_choices=[RealData2])
+    names = [field.name for field in fields]
+    assert names == ["source", "a", "b", "some_end", "d"]
+
+    for field in fields:
+        print(field)
+
+    fields = UnionData2.get_fields(union_choices=[SimulatedData2])
+    names = [field.name for field in fields]
+    assert names == ["source", "c", "some_end", "d"]

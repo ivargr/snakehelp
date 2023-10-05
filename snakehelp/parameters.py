@@ -4,7 +4,7 @@ from collections import namedtuple
 from pathlib import Path
 from dataclasses import dataclass, fields
 #from types import UnionType
-from typing import get_origin, Literal, Union, get_args
+from typing import get_origin, Literal, Union, get_args, Optional, List
 from snakehelp.snakehelp import classproperty, string_is_valid_type, type_to_regex
 from .config import get_data_folder
 from shared_memory_wrapper import to_file, from_file
@@ -101,7 +101,7 @@ def parameters(base_class):
             return matches[0]
 
         @classmethod
-        def get_fields(cls, minimal=False, minimal_children=False):
+        def get_fields(cls, minimal=False, minimal_children=False, union_choices: Optional[List] = None):
             """
             Returns a list of tuples (field_name, field_type)
 
@@ -119,10 +119,20 @@ def parameters(base_class):
                 if field.type in (int, str, float):
                     out.append(field_tuple(field.name, field.type, field.default))
                 elif get_origin(field.type) in (Literal, Union):
-                    default = field.default
-                    if get_origin(field.type) == Literal and len(get_args(field.type)) == 1:
-                        default = get_args(field.type)[0]
-                    out.append(field_tuple(field.name, field.type, default))
+                    if get_origin(field.type) == Union and union_choices is not None and set(get_args(field.type)).intersection(union_choices):
+                        # field type is Union but one of the fields is matching against a union choice
+                        choice = set(get_args(field.type)).intersection(union_choices).pop()
+                        if hasattr(choice, "get_fields"):
+                            # preferred choice can be unpacked further
+                            out.extend(
+                                choice.get_fields(minimal=minimal_children, minimal_children=minimal_children))
+                        else:
+                            out.append(field_tuple(field.name, choice, field.default))
+                    else:
+                        default = field.default
+                        if get_origin(field.type) == Literal and len(get_args(field.type)) == 1:
+                            default = get_args(field.type)[0]
+                        out.append(field_tuple(field.name, field.type, default))
                 else:
                     assert hasattr(field.type, "get_fields"), "Field type %s is not valid. " \
                                                               "Must be a base type or a class decorated with @parameters" % field.type
