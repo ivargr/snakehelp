@@ -223,7 +223,7 @@ class SomeResult:
 
 
 def test_result_decorator():
-    assert SomeResult().file_path() == "test/SomeResult.txt"
+    assert SomeResult("test").file_path() == "test/SomeResult.txt"
 
 
 
