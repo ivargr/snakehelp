@@ -22,7 +22,7 @@ field_tuple = namedtuple("Field", ["name", "type", "default"])
 
 
 def result(base_class):
-    class Result(parameters(base_class)):
+    class Result(parameters(base_class), ResultLike):
         """
         A Result is simply a Parameter where the file name is by default the result's class name
         """
@@ -106,7 +106,7 @@ def parameters(base_class):
 
         def get_field(cls, name):
             """Returns a field by name"""
-            matches = [f for f in self.fields(cls) if f.name == name]
+            matches = [f for f in cls.fields() if f.name == name]
             assert len(matches) == 1
             return matches[0]
 
@@ -162,7 +162,6 @@ def parameters(base_class):
             !!! Very experimental, should not be used. Better to use replace_field
             """
             assert isinstance(type, str)
-            print("Limiting union choice to %s on %s" % (type, cls))
             cls._union_choices.append(type)
 
         @classmethod
@@ -370,7 +369,10 @@ def parameters(base_class):
                 else:
                     new_fields.append(field)
 
-            return parameters(dataclasses.make_dataclass(cls.__name__, new_fields))
+            decorator = parameters
+            if issubclass(cls, ResultLike):
+                decorator = result
+            return decorator(dataclasses.make_dataclass(cls.__name__, new_fields))
 
     Parameters.__name__ = base_class.__name__
     Parameters.__qualname__ = base_class.__qualname__

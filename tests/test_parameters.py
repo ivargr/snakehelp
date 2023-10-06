@@ -1,7 +1,7 @@
 import os
 import pytest
 from snakehelp import parameters
-from snakehelp.parameters import result
+from snakehelp.parameters import result, ResultLike, ParameterLike
 from snakehelp.snakehelp import type_to_regex
 from typing import Literal, Union
 import dataclasses
@@ -357,3 +357,14 @@ def test_replace_field():
     print(new.fields())
     types = [f.type for f in new.get_fields()]
     assert types == [int, int, int, int]
+
+
+@result
+class SomeResult:
+    test: str
+
+
+def test_result_type():
+    assert isinstance(SomeResult("test"), ResultLike)
+    assert issubclass(SomeResult, ResultLike)
+
