@@ -34,6 +34,7 @@ class PlotType:
     labels: str = None
     markers: bool = False
     layout: dict = None
+    text: str = None
 
     def __post_init__(self):
         self._validate()
