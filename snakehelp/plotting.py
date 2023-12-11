@@ -138,6 +138,8 @@ class Plot:
         # prettier facet titles, names, etc
         if pretty_names_func is not None:
             fig.for_each_annotation(lambda a: a.update(text=pretty_names_func(a.text.split("=")[-1])))
+            fig.for_each_xaxis(lambda a: a.update(title_text=pretty_names_func(a.title.text.split("=")[-1])))
+            fig.for_each_yaxis(lambda a: a.update(title_text=pretty_names_func(a.title.text.split("=")[-1])))
             fig.for_each_trace(lambda t: t.update(name=pretty_names_func(t.name)))
 
         if "text" in specification:
